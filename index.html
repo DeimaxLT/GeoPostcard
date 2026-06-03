@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoPostcard — Travel Postcard Creator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Dancing+Script:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --aged: #e8dfc8;
+    --sepia: #c4a882;
+    --brown: #7a5c3a;
+    --dark: #3a2a1a;
+    --stamp-red: #c0392b;
+    --stamp-blue: #1a3a5c;
+    --ink: #2c1f0f;
+    --gold: #c9a84c;
+    --faded: rgba(122,92,58,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1208;
+    min-height: 100vh;
+    font-family: 'Libre Baskerville', Georgia, serif;
+    color: var(--cream);
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  header {
+    text-align: center;
+    padding: 3rem 1rem 2rem;
+    position: relative;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+  header h1 span {
+    color: var(--gold);
+    font-style: italic;
+  }
+  .header-rule {
+    width: 120px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 1.2rem auto;
+  }
+
+  .app-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  /* Controls panel */
+  .controls-panel {
+    background: rgba(245,240,232,0.07);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 2px;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+  .control-group label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sepia);
+    margin-bottom: 0.5rem;
+    font-family: 'Libre Baskerville', serif;
+  }
+  .control-group input[type="text"],
+  .control-group select,
+  .control-group textarea {
+    width: 100%;
+    background: rgba(245,240,232,0.06);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .control-group input[type="text"]:focus,
+  .control-group select:focus,
+  .control-group textarea:focus {
+    border-color: var(--gold);
+  }
+  .control-group select option { background: #2a1f10; }
+  .control-group textarea { min-height: 80px; resize: vertical; }
+
+  .upload-zone {
+    border: 2px dashed rgba(201,168,76,0.4);
+    border-radius: 2px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.05);
+  }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .upload-text { font-family: 'Dancing Script', cursive; font-size: 1.1rem; color: var(--sepia); }
+  .upload-sub { font-size: 0.75rem; color: rgba(196,168,130,0.6); margin-top: 0.3rem; }
+
+  .toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.2rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(201,168,76,0.15);
+  }
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--sepia);
+  }
+  .toggle-item input[type="checkbox"] {
+    accent-color: var(--gold);
+    width: 15px; height: 15px;
+    cursor: pointer;
+  }
+
+  /* Generate button */
+  .btn-generate {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+  .btn-generate:hover {
+    background: rgba(201,168,76,0.12);
+  }
+
+  /* Postcard display area */
+  .postcard-stage {
+    display: none;
+    animation: fadeIn 0.6s ease;
+  }
+  .postcard-stage.visible { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .stage-title {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.4rem;
+    color: var(--sepia);
+  }
+
+  .view-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .view-tab {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    color: var(--sepia);
+    background: transparent;
+    border: none;
+    font-family: 'Libre Baskerville', serif;
+    transition: all 0.2s;
+  }
+  .view-tab.active {
+    background: rgba(201,168,76,0.2);
+    color: var(--gold);
+  }
+
+  .postcard-wrapper {
+    display: flex;
+    justify-content: center;
+    perspective: 1200px;
+  }
+
+  /* === POSTCARD FRONT === */
+  .postcard-front {
+    width: 100%;
+    max-width: 680px;
+    aspect-ratio: 3/2;
+    position: relative;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow:
+      0 2px 0 rgba(255,255,255,0.05) inset,
+      0 -2px 0 rgba(0,0,0,0.3) inset,
+      8px 12px 40px rgba(0,0,0,0.7),
+      2px 3px 0 rgba(255,255,255,0.03);
+    transform: rotate(-0.5deg);
+    transition: transform 0.4s ease;
+    cursor: default;
+  }
+  .postcard-front:hover { transform: rotate(0deg) scale(1.01); }
+
+  .pc-photo {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-color: #2a1f10;
+  }
+  .pc-photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(10,5,0,0.1) 0%,
+      rgba(10,5,0,0) 30%,
+      rgba(10,5,0,0.15) 60%,
+      rgba(10,5,0,0.65) 100%
+    );
+  }
+
+  /* Vintage color grade overlay */
+  .pc-grade {
+    position: absolute;
+    inset: 0;
+    mix-blend-mode: multiply;
+    opacity: 0.35;
+    background: linear-gradient(135deg, #d4a574 0%, #c4956a 50%, #b08050 100%);
+    pointer-events: none;
+  }
+  .pc-grade.vintage {
+    opacity: 0.55;
+    background: linear-gradient(135deg, #c8a060 0%, #b08040 50%, #906830 100%);
+  }
+
+  /* Paper texture overlay */
+  .pc-texture {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.015) 2px,
+        rgba(255,255,255,0.015) 4px
+      );
+    pointer-events: none;
+  }
+
+  /* Border */
+  .pc-border {
+    position: absolute;
+    inset: 6px;
+    border: 2px solid rgba(255,255,255,0.25);
+    pointer-events: none;
+    border-radius: 1px;
+  }
+  .pc-border::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* Main title text */
+  .pc-title-area {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 1.5rem 2rem 1.8rem;
+    text-align: center;
+    z-index: 5;
+  }
+  .pc-subtitle {
+    font-family: 'Dancing Script', cursive;
+    font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+    color: rgba(245,240,232,0.75);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+    text-shadow: 1px 2px 8px rgba(0,0,0,0.8);
+  }
+  .pc-main-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.3rem, 4.5vw, 2.4rem);
+    font-weight: 700;
+    font-style: italic;
+    color: #fff;
+    text-shadow: 2px 3px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.5);
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+  }
+  .pc-tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(0.65rem, 2vw, 0.88rem);
+    color: rgba(245,240,232,0.6);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.4rem;
+    text-shadow: 1px 2px 6px rgba(0,0,0,0.8);
+  }
+
+  /* Tiny geocache code top-left */
+  .pc-cache-code {
+    position: absolute;
+    top: 10px; left: 14px;
+    z-index: 10;
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.18);
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  /* Wear effects */
+  .pc-wear {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 5% 5%, rgba(255,255,255,0.06) 0%, transparent 40%),
+      radial-gradient(ellipse at 95% 95%, rgba(0,0,0,0.12) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  /* === POSTCARD BACK === */
+  .postcard-back {
+    width: 100%;
+    max-width: 680px;
+    aspect-ratio: 3/2;
+    background: var(--cream);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 8px 12px 40px rgba(0,0,0,0.7);
+    transform: rotate(0.3deg);
+    display: none;
+  }
+  .postcard-back.visible { display: block; }
+
+  .pcb-texture {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 20px,
+        rgba(122,92,58,0.08) 20px,
+        rgba(122,92,58,0.08) 21px
+      );
+    pointer-events: none;
+  }
+  .pcb-border {
+    position: absolute;
+    inset: 8px;
+    border: 1.5px solid rgba(122,92,58,0.25);
+    pointer-events: none;
+  }
+
+  .pcb-left {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 55%;
+    padding: 2rem 1.5rem 1.5rem 2rem;
+    border-right: 2px solid rgba(122,92,58,0.2);
+    display: flex; flex-direction: column;
+  }
+  .pcb-right {
+    position: absolute;
+    top: 0; left: 55%; bottom: 0; right: 0;
+    padding: 1.5rem;
+    display: flex; flex-direction: column;
+  }
+
+  .pcb-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--brown);
+    margin-bottom: 0.5rem;
+  }
+  .pcb-message-area {
+    flex: 1;
+    font-family: 'Dancing Script', cursive;
+    font-size: 0.95rem;
+    color: var(--ink);
+    line-height: 1.7;
+    word-break: break-word;
+    overflow: hidden;
+  }
+  .pcb-geo-mark {
+    margin-top: auto;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(122,92,58,0.5);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Stamp area */
+  .pcb-stamp-box {
+    width: 65px; height: 78px;
+    border: 1.5px solid rgba(122,92,58,0.35);
+    position: absolute;
+    top: 1.5rem; right: 1.5rem;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(122,92,58,0.4);
+    font-family: 'Libre Baskerville', serif;
+  }
+  .pcb-stamp-box::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px dashed rgba(122,92,58,0.2);
+  }
+
+  /* Address lines */
+  .pcb-address-lines {
+    margin-top: 5.5rem;
+  }
+  .pcb-addr-line {
+    height: 1px;
+    background: rgba(122,92,58,0.2);
+    margin-bottom: 0.9rem;
+  }
+  .pcb-addr-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(122,92,58,0.35);
+    font-family: 'Libre Baskerville', serif;
+    margin-bottom: 0.3rem;
+  }
+
+  /* Postmark on back */
+  .pcb-postmark {
+    position: absolute;
+    bottom: 1.5rem; right: 1.5rem;
+    opacity: 0.25;
+  }
+
+  /* Download buttons */
+  .download-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-download {
+    padding: 0.7rem 1.6rem;
+    border: 1px solid rgba(201,168,76,0.4);
+    background: transparent;
+    color: var(--sepia);
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.25s;
+  }
+  .btn-download:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+
+  /* placeholder state */
+  .pc-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(196,168,130,0.4);
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.3rem;
+    text-align: center;
+    padding: 2rem;
+  }
+  .pc-placeholder svg { margin-bottom: 1rem; opacity: 0.3; }
+
+  /* Section divider */
+  .section-divider {
+    display: flex; align-items: center; gap: 1rem;
+    margin: 2.5rem 0 1.5rem;
+  }
+  .section-divider::before, .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
+  }
+  .section-divider span {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1rem;
+    color: var(--sepia);
+    white-space: nowrap;
+  }
+
+  /* Message input below */
+  .message-input-area {
+    background: rgba(245,240,232,0.05);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 2px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .message-input-area label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sepia);
+    margin-bottom: 0.6rem;
+  }
+  .message-input-area textarea {
+    width: 100%;
+    background: rgba(245,240,232,0.05);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 2px;
+    color: var(--cream);
+    font-family: 'Dancing Script', cursive;
+    font-size: 1rem;
+    padding: 0.7rem 1rem;
+    outline: none;
+    resize: vertical;
+    min-height: 90px;
+    transition: border-color 0.2s;
+  }
+  .message-input-area textarea:focus {
+    border-color: var(--gold);
+  }
+
+  @media (max-width: 600px) {
+    .controls-grid { grid-template-columns: 1fr; }
+    .pc-main-title { font-size: 1.4rem; }
+    .postcard-front { transform: none; }
+  }
+
+  /* Loading state */
+  .pc-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(26,18,8,0.85);
+    z-index: 20;
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.3rem;
+    color: var(--sepia);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Geo<span>Postcard</span></h1>
+  <div class="header-rule"></div>
+  <p style="font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:rgba(196,168,130,0.7);letter-spacing:0.12em;text-transform:uppercase;">Turn your travels into timeless souvenirs</p>
+</header>
+
+<div class="app-container">
+
+  <!-- Controls -->
+  <div class="controls-panel">
+    <div class="controls-grid">
+
+      <div class="control-group" style="grid-column:1/-1">
+        <label>📸 Your Adventure Photo</label>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="photoInput" accept="image/*">
+          <div class="upload-icon">🗺️</div>
+          <div class="upload-text">Drop your photo here or click to browse</div>
+          <div class="upload-sub">JPG, PNG, WEBP · Any resolution · Client-side only</div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Location / Place Name</label>
+        <input type="text" id="locationInput" placeholder="e.g. Navagio Beach, Zakynthos" value="Navagio Beach">
+      </div>
+
+      <div class="control-group">
+        <label>Country / Region</label>
+        <input type="text" id="regionInput" placeholder="e.g. Greece" value="Greece">
+      </div>
+
+      <div class="control-group">
+        <label>Postcard Language</label>
+        <select id="languageSelect">
+          <option value="en">English</option>
+          <option value="lt">Lithuanian</option>
+          <option value="de">German</option>
+          <option value="el">Greek</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Postcard Style</label>
+        <select id="styleSelect">
+          <option value="classic">Classic Souvenir</option>
+          <option value="romantic">Romantic Escape</option>
+          <option value="adventure">Adventure & Discovery</option>
+          <option value="memories">Nostalgic Memories</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="toggle-row">
+      <label class="toggle-item">
+        <input type="checkbox" id="vintageToggle" checked>
+        Vintage Filter
+      </label>
+      <label class="toggle-item">
+        <input type="checkbox" id="showBackToggle">
+        Show Postcard Back
+      </label>
+    </div>
+
+    <button class="btn-generate" id="generateBtn">✦ Generate My Postcard ✦</button>
+  </div>
+
+  <!-- Postcard Stage -->
+  <div class="postcard-stage" id="postcardStage">
+
+    <div class="stage-header">
+      <span class="stage-title">Your Postcard is Ready</span>
+      <div class="view-tabs" id="viewTabs">
+        <button class="view-tab active" data-side="front">Front</button>
+        <button class="view-tab" data-side="back">Back</button>
+      </div>
+    </div>
+
+    <!-- FRONT -->
+    <div class="postcard-wrapper">
+      <div class="postcard-front" id="postcardFront">
+        <div class="pc-photo" id="pcPhoto">
+          <div class="pc-placeholder">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="28" stroke="currentColor" stroke-width="1.5"/><path d="M20 38 L28 26 L34 34 L38 28 L44 38Z" fill="currentColor" opacity="0.4"/><circle cx="22" cy="24" r="4" fill="currentColor" opacity="0.4"/></svg>
+            Upload a photo to create your postcard
+          </div>
+        </div>
+        <div class="pc-grade" id="pcGrade"></div>
+        <div class="pc-texture"></div>
+        <div class="pc-wear"></div>
+        <div class="pc-border"></div>
+
+        <!-- Tiny cache code top-left -->
+        <div class="pc-cache-code">GCBJ8HR</div>
+
+        <!-- Title area -->
+        <div class="pc-title-area">
+          <div class="pc-subtitle" id="pcSubtitle">Wish You Were Here</div>
+          <div class="pc-main-title" id="pcMainTitle">Greetings from Navagio Beach</div>
+          <div class="pc-tagline" id="pcTagline">IONIAN ISLANDS · GREECE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BACK -->
+    <div class="postcard-wrapper" style="margin-top:1.5rem">
+      <div class="postcard-back" id="postcardBack">
+        <div class="pcb-texture"></div>
+        <div class="pcb-border"></div>
+
+        <div class="pcb-left">
+          <div class="pcb-heading">✉ Message</div>
+          <div class="pcb-message-area" id="pcbMessageDisplay">
+            Greetings from Zakynthos! Today I discovered this incredible hidden place. The cliffs, sea, and atmosphere were truly unforgettable.
+          </div>
+          <div class="pcb-geo-mark">
+            <span>Created with GeoPostcard by Deimax</span>
+          </div>
+        </div>
+
+        <div class="pcb-right">
+          <div class="pcb-stamp-box">
+            <span>Stamp</span>
+          </div>
+          <div class="pcb-address-lines">
+            <div class="pcb-addr-label">Recipient</div>
+            <div class="pcb-addr-line"></div>
+            <div class="pcb-addr-line"></div>
+            <div class="pcb-addr-line"></div>
+            <div style="height:1rem"></div>
+            <div class="pcb-addr-label">Address</div>
+            <div class="pcb-addr-line"></div>
+            <div class="pcb-addr-line"></div>
+            <div class="pcb-addr-line"></div>
+          </div>
+        </div>
+
+        <!-- Postmark on back: month over year -->
+        <svg class="pcb-postmark" width="70" height="70" viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="32" fill="none" stroke="rgba(122,92,58,0.8)" stroke-width="2"/>
+          <circle cx="35" cy="35" r="25" fill="none" stroke="rgba(122,92,58,0.6)" stroke-width="1"/>
+          <text x="35" y="32" text-anchor="middle" fill="rgba(122,92,58,0.8)" font-size="7" font-family="Libre Baskerville,serif" letter-spacing="1" id="pcbMonth">JUNE</text>
+          <line x1="10" y1="37" x2="60" y2="37" stroke="rgba(122,92,58,0.6)" stroke-width="1"/>
+          <text x="35" y="48" text-anchor="middle" fill="rgba(122,92,58,0.7)" font-size="7" font-family="Libre Baskerville,serif" letter-spacing="1" id="pcbYear">2026</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Back message input -->
+    <div class="message-input-area" id="messageInputArea" style="display:none; margin-top:1.5rem">
+      <label>Write your postcard message (appears on the back)</label>
+      <textarea id="messageInput" placeholder="Write your message here...">Greetings from this incredible place! What a beautiful corner of the world to discover.</textarea>
+    </div>
+
+    <!-- Download buttons -->
+    <div class="download-row">
+      <button class="btn-download" id="downloadFront">⬇ Download Front</button>
+      <button class="btn-download" id="downloadBoth">⬇ Download Full Postcard (Front + Back)</button>
+    </div>
+
+  </div><!-- end postcard-stage -->
+
+</div><!-- end app-container -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+// Postcard text library
+const texts = {
+  en: {
+    classic: {
+      subtitles: ["Greetings from", "Wish You Were Here —", "A Souvenir from", "With Love from"],
+      mainTitles: (loc) => [`Greetings from ${loc}`, `Wish You Were Here – ${loc}`, `Sunny Days in ${loc}`, `From ${loc} with Love`],
+      taglines: (loc, reg) => [`${loc.toUpperCase()} · ${reg.toUpperCase()}`, `MEMORIES FROM ${reg.toUpperCase()}`, `${reg.toUpperCase()} — A PLACE TO REMEMBER`],
+      message: (loc, reg) => `Greetings from ${loc}! What a wonderful place to discover. The scenery and atmosphere of ${reg} were truly unforgettable — a beauty worth every step of the journey.`,
+    },
+    romantic: {
+      subtitles: ["From the Heart of", "An Escape to", "Lost in", "Dreaming of"],
+      mainTitles: (loc) => [`${loc} — An Unforgettable Escape`, `From the Shores of ${loc} with Love`, `Where Time Stands Still in ${loc}`, `Memories from ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · TIMELESS MOMENTS`, `ROMANTIC SHORES OF ${loc.toUpperCase()}`, `DREAMING OF ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Greetings from the magical ${loc}! Every moment here felt like stepping into a dream — one of ${reg}'s most breathtaking secrets. I wish you could see it too.`,
+    },
+    adventure: {
+      subtitles: ["Discovered at", "Adventures in", "Exploring", "Found at"],
+      mainTitles: (loc) => [`${loc} — A Discovery`, `The Adventure of ${loc}`, `Exploring the Wonders of ${loc}`, `A Hidden Gem in ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ADVENTURE AWAITS`, `EXPLORER · ${loc.toUpperCase()}`, `DISCOVER · ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Adventure found at ${loc}, ${reg}! The journey led me through breathtaking landscapes to discover this extraordinary place. Worth every step along the way.`,
+    },
+    memories: {
+      subtitles: ["Remembering", "Once Upon a Time in", "A Summer Memory from", "Looking Back at"],
+      mainTitles: (loc) => [`Memories from ${loc}`, `${loc} — Always in My Heart`, `A Summer Spent in ${loc}`, `The Magic of ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · FOREVER REMEMBERED`, `NOSTALGIA FROM ${loc.toUpperCase()}`, `GOLDEN DAYS IN ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Some places stay with you forever — ${loc} is one of them. This journey through ${reg} gifted me with memories I will carry always. The beauty here is beyond any postcard.`,
+    }
+  },
+  lt: {
+    classic: {
+      subtitles: ["Sveikinimai iš", "Norėtum čia būti —", "Atvirukas iš", "Su meile iš"],
+      mainTitles: (loc) => [`Sveikinimai iš ${loc}`, `Norėtum čia būti – ${loc}`, `Saulėtos dienos ${loc}`, `Iš ${loc} su meile`],
+      taglines: (loc, reg) => [`${loc.toUpperCase()} · ${reg.toUpperCase()}`, `PRISIMINIMAI IŠ ${reg.toUpperCase()}`, `${reg.toUpperCase()} — NEPAMIRŠTAMA VIETA`],
+      message: (loc, reg) => `Sveikinimai iš ${loc}! ${reg} gamta ir atmosfera buvo tikrai nepamiršiami — grožis, vertas kiekvieno žingsnio.`,
+    },
+    romantic: {
+      subtitles: ["Iš", "Pabėgimas į", "Pasiklydus", "Svajojant apie"],
+      mainTitles: (loc) => [`${loc} — Neužmirštama kelionė`, `Iš ${loc} krantų su meile`, `Laikas sustojo ${loc}`, `Prisiminimai iš ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · AMŽINI MOMENTAI`, `ROMANTIŠKI ${loc.toUpperCase()} KRANTAI`, `SVAJOJANT APIE ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Sveikinimai iš magiškojo ${loc}! Kiekviena akimirka čia buvo kaip sapnas — vienas gražiausių ${reg} paslapčių.`,
+    },
+    adventure: {
+      subtitles: ["Atrasta:", "Nuotykiai", "Tyrinėjant", "Atradimas:"],
+      mainTitles: (loc) => [`${loc} — Atradimas`, `Nuotykiai ${loc}`, `${loc} stebuklų tyrinėjimas`, `Paslėptas perlas ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · NUOTYKIAI LUK`, `TYRINĖTOJAS · ${loc.toUpperCase()}`, `ATRASK · ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Atrasta ${loc}, ${reg}! Kelionė vedė mane per nuostabius kraštovaizdžius į šią neeilinę vietą. Verta kiekvieno žingsnio.`,
+    },
+    memories: {
+      subtitles: ["Prisimenant", "Kadaise", "Vasaros prisiminimai iš", "Žvelgiant atgal į"],
+      mainTitles: (loc) => [`Prisiminimai iš ${loc}`, `${loc} — visada širdyje`, `Vasara ${loc}`, `${loc} magija`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · AMŽINAI PRISIMINTA`, `NOSTALGIJA IŠ ${loc.toUpperCase()}`, `AUKSINĖS DIENOS ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Kai kurios vietos lieka su tavimi amžinai — ${loc} yra viena iš jų. Ši kelionė po ${reg} man padovanojo prisiminimus, kuriuos nešiosiu visada.`,
+    }
+  },
+  de: {
+    classic: {
+      subtitles: ["Grüße aus", "Schön wärst du hier —", "Ein Souvenir aus", "Mit Liebe aus"],
+      mainTitles: (loc) => [`Grüße aus ${loc}`, `Schön wärst du hier – ${loc}`, `Sonnige Tage in ${loc}`, `Aus ${loc} mit Liebe`],
+      taglines: (loc, reg) => [`${loc.toUpperCase()} · ${reg.toUpperCase()}`, `ERINNERUNGEN AUS ${reg.toUpperCase()}`, `${reg.toUpperCase()} — EIN UNVERGESSLICHER ORT`],
+      message: (loc, reg) => `Grüße aus ${loc}! Die Landschaft und Atmosphäre von ${reg} waren wirklich unvergesslich — eine Schönheit, die jeden Schritt wert war.`,
+    },
+    romantic: {
+      subtitles: ["Aus dem Herzen von", "Flucht nach", "Verloren in", "Träumend von"],
+      mainTitles: (loc) => [`${loc} — Eine unvergessliche Reise`, `Von den Ufern ${loc}s mit Liebe`, `Wo die Zeit stillsteht in ${loc}`, `Erinnerungen aus ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ZEITLOSE MOMENTE`, `ROMANTISCHE UFER ${loc.toUpperCase()}`, `TRÄUMEND VON ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Grüße aus dem zauberhaften ${loc}! Jeder Moment hier fühlte sich wie ein Traum an — eines der atemberaubendsten Geheimnisse von ${reg}.`,
+    },
+    adventure: {
+      subtitles: ["Entdeckt bei", "Abenteuer in", "Auf Erkundung in", "Gefunden bei"],
+      mainTitles: (loc) => [`${loc} — Eine Entdeckung`, `Das Abenteuer von ${loc}`, `Die Wunder von ${loc} erkunden`, `Ein verstecktes Juwel in ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ABENTEUER WARTET`, `ENTDECKER · ${loc.toUpperCase()}`, `ENTDECKEN · ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Entdeckt bei ${loc}, ${reg}! Die Reise führte mich durch atemberaubende Landschaften zu diesem außergewöhnlichen Ort. Jeden Schritt wert.`,
+    },
+    memories: {
+      subtitles: ["In Erinnerung an", "Es war einmal in", "Eine Sommererinnerung aus", "Zurückblickend auf"],
+      mainTitles: (loc) => [`Erinnerungen aus ${loc}`, `${loc} — immer in meinem Herzen`, `Ein Sommer in ${loc}`, `Der Zauber von ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · FÜR IMMER ERINNERT`, `NOSTALGIE AUS ${loc.toUpperCase()}`, `GOLDENE TAGE IN ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Manche Orte bleiben für immer bei einem — ${loc} ist einer davon. Diese Reise durch ${reg} schenkte mir Erinnerungen, die ich immer tragen werde.`,
+    }
+  },
+  el: {
+    classic: {
+      subtitles: ["Χαιρετίσματα από", "Μακάρι να ήσουν εδώ —", "Ένα σουβενίρ από", "Με αγάπη από"],
+      mainTitles: (loc) => [`Χαιρετίσματα από ${loc}`, `Μακάρι να ήσουν εδώ – ${loc}`, `Ηλιόλουστες μέρες στη ${loc}`, `Από τη ${loc} με αγάπη`],
+      taglines: (loc, reg) => [`${loc.toUpperCase()} · ${reg.toUpperCase()}`, `ΑΝΑΜΝΗΣΕΙΣ ΑΠΟ ${reg.toUpperCase()}`, `${reg.toUpperCase()} — ΕΝΑ ΑΞΕΧΑΣΤΟ ΜΕΡΟΣ`],
+      message: (loc, reg) => `Χαιρετίσματα από τη ${loc}! Η ομορφιά και η ατμόσφαιρα της ${reg} ήταν πραγματικά αξέχαστες — μια ομορφιά που αξίζει κάθε βήμα.`,
+    },
+    romantic: {
+      subtitles: ["Από την καρδιά της", "Απόδραση στη", "Χαμένος στη", "Ονειρευόμενος τη"],
+      mainTitles: (loc) => [`${loc} — Αξέχαστη απόδραση`, `Από τις ακτές της ${loc} με αγάπη`, `Ο χρόνος σταματά στη ${loc}`, `Αναμνήσεις από τη ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ΑΙΏΝΙΕΣ ΣΤΙΓΜΕΣ`, `ΡΟΜΑΝΤΙΚΕΣ ΑΚΤΕΣ ${loc.toUpperCase()}`, `ΟΝΕΙΡΑ ΓΙΑ ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Χαιρετίσματα από τη μαγική ${loc}! Κάθε στιγμή εδώ ήταν σαν όνειρο — ένα από τα πιο εντυπωσιακά μυστικά της ${reg}.`,
+    },
+    adventure: {
+      subtitles: ["Ανακαλύφθηκε στη", "Περιπέτεια στη", "Εξερεύνηση της", "Βρέθηκε στη"],
+      mainTitles: (loc) => [`${loc} — Μια Ανακάλυψη`, `Η περιπέτεια της ${loc}`, `Εξερευνώντας τα θαύματα της ${loc}`, `Κρυμμένο διαμάντι στη ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ΠΕΡΙΠΕΤΕΙΑ`, `ΕΞΕΡΕΥΝΗΤΗΣ · ${loc.toUpperCase()}`, `ΑΝΑΚΑΛΥΨΕ · ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Ανακαλύφθηκε στη ${loc}, ${reg}! Το ταξίδι με οδήγησε μέσα από εκπληκτικά τοπία σε αυτόν τον εξαιρετικό τόπο. Άξιζε κάθε βήμα.`,
+    },
+    memories: {
+      subtitles: ["Θυμάμαι", "Κάποτε στη", "Ανάμνηση από τη", "Κοιτώντας πίσω στη"],
+      mainTitles: (loc) => [`Αναμνήσεις από τη ${loc}`, `${loc} — Πάντα στην καρδιά μου`, `Ένα καλοκαίρι στη ${loc}`, `Η μαγεία της ${loc}`],
+      taglines: (loc, reg) => [`${reg.toUpperCase()} · ΓΙΑ ΠΑΝΤΑ ΣΤΗΝ ΚΑΡΔΙΑ`, `ΝΟΣΤΑΛΓΙΑ ΑΠΟ ${loc.toUpperCase()}`, `ΧΡΥΣΕΣ ΜΕΡΕΣ ${reg.toUpperCase()}`],
+      message: (loc, reg) => `Κάποιοι τόποι μένουν μαζί σου για πάντα — η ${loc} είναι ένας από αυτούς. Αυτό το ταξίδι στη ${reg} μου χάρισε αναμνήσεις που θα κρατώ πάντα.`,
+    }
+  }
+};
+
+// State
+let uploadedPhotoURL = null;
+let currentSide = 'front';
+
+// DOM refs
+const photoInput = document.getElementById('photoInput');
+const uploadZone = document.getElementById('uploadZone');
+const generateBtn = document.getElementById('generateBtn');
+const postcardStage = document.getElementById('postcardStage');
+const pcPhoto = document.getElementById('pcPhoto');
+const pcGrade = document.getElementById('pcGrade');
+const pcSubtitle = document.getElementById('pcSubtitle');
+const pcMainTitle = document.getElementById('pcMainTitle');
+const pcTagline = document.getElementById('pcTagline');
+const postcardBack = document.getElementById('postcardBack');
+const messageInput = document.getElementById('messageInput');
+const messageInputArea = document.getElementById('messageInputArea');
+const pcbMessageDisplay = document.getElementById('pcbMessageDisplay');
+const viewTabs = document.querySelectorAll('.view-tab');
+
+// Date info
+const now = new Date();
+const yearStr = now.getFullYear().toString();
+const monthStr = now.toLocaleString('en-US', {month:'long'}).toUpperCase();
+document.getElementById('pcbMonth').textContent = monthStr;
+document.getElementById('pcbYear').textContent = yearStr;
+
+// Upload
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadPhoto(file);
+});
+photoInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadPhoto(e.target.files[0]);
+});
+
+function loadPhoto(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    uploadedPhotoURL = ev.target.result;
+    uploadZone.querySelector('.upload-text').textContent = '✓ ' + file.name;
+    uploadZone.style.borderColor = 'rgba(201,168,76,0.7)';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Generate
+generateBtn.addEventListener('click', () => {
+  const loc = document.getElementById('locationInput').value.trim() || 'Navagio Beach';
+  const reg = document.getElementById('regionInput').value.trim() || 'Greece';
+  const lang = document.getElementById('languageSelect').value;
+  const style = document.getElementById('styleSelect').value;
+  const vintage = document.getElementById('vintageToggle').checked;
+  const showBack = document.getElementById('showBackToggle').checked;
+
+  const langTexts = texts[lang] || texts.en;
+  const styleTexts = langTexts[style] || langTexts.classic;
+
+  // Pick titles
+  const titles = styleTexts.mainTitles(loc);
+  const mainTitle = titles[Math.floor(Math.random() * titles.length)];
+  const subs = styleTexts.subtitles;
+  const subtitle = subs[Math.floor(Math.random() * subs.length)];
+  const tags = styleTexts.taglines(loc, reg);
+  const tagline = tags[Math.floor(Math.random() * tags.length)];
+  const message = styleTexts.message(loc, reg);
+
+  // Apply to front
+  pcSubtitle.textContent = subtitle;
+  pcMainTitle.textContent = mainTitle;
+  pcTagline.textContent = tagline;
+
+  // Photo
+  if (uploadedPhotoURL) {
+    pcPhoto.style.backgroundImage = `url(${uploadedPhotoURL})`;
+    pcPhoto.querySelector('.pc-placeholder').style.display = 'none';
+  }
+
+  // Vintage filter
+  pcGrade.className = 'pc-grade' + (vintage ? ' vintage' : '');
+
+  // Back
+  if (showBack) {
+    postcardBack.classList.add('visible');
+    messageInputArea.style.display = 'block';
+    if (!messageInput.dataset.edited) messageInput.value = message;
+    pcbMessageDisplay.textContent = messageInput.value;
+  } else {
+    postcardBack.classList.remove('visible');
+    messageInputArea.style.display = 'none';
+    if (!messageInput.dataset.edited) messageInput.value = message;
+  }
+
+  postcardStage.classList.add('visible');
+  postcardStage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// Message sync
+messageInput.addEventListener('input', () => {
+  messageInput.dataset.edited = '1';
+  pcbMessageDisplay.textContent = messageInput.value;
+});
+
+// View tabs
+document.querySelectorAll('.view-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentSide = tab.dataset.side;
+    document.getElementById('postcardFront').closest('.postcard-wrapper').style.display = currentSide === 'front' ? 'flex' : 'none';
+    document.querySelector('.postcard-back').closest('.postcard-wrapper').style.display = currentSide === 'back' ? 'flex' : 'none';
+  });
+});
+
+// Toggle back
+document.getElementById('showBackToggle').addEventListener('change', e => {
+  if (!postcardStage.classList.contains('visible')) return;
+  if (e.target.checked) {
+    postcardBack.classList.add('visible');
+    messageInputArea.style.display = 'block';
+    document.querySelector('.postcard-back').closest('.postcard-wrapper').style.display = 'flex';
+  } else {
+    postcardBack.classList.remove('visible');
+    messageInputArea.style.display = 'none';
+    document.querySelector('.postcard-back').closest('.postcard-wrapper').style.display = 'none';
+  }
+});
+
+// Vintage toggle live update
+document.getElementById('vintageToggle').addEventListener('change', e => {
+  if (!postcardStage.classList.contains('visible')) return;
+  pcGrade.className = 'pc-grade' + (e.target.checked ? ' vintage' : '');
+});
+
+// Download
+document.getElementById('downloadFront').addEventListener('click', () => downloadCard('front'));
+document.getElementById('downloadBoth').addEventListener('click', () => downloadCard('both'));
+
+function downloadCard(mode) {
+  const front = document.getElementById('postcardFront');
+  const back = document.getElementById('postcardBack');
+
+  if (mode === 'front') {
+    html2canvas(front, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: null }).then(canvas => {
+      triggerDownload(canvas, 'geocard-front.png');
+    });
+    return;
+  }
+
+  // Both: stack vertically
+  Promise.all([
+    html2canvas(front, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: null }),
+    html2canvas(back, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#f5f0e8' })
+  ]).then(([c1, c2]) => {
+    const combined = document.createElement('canvas');
+    combined.width = Math.max(c1.width, c2.width);
+    combined.height = c1.height + c2.height + 40;
+    const ctx = combined.getContext('2d');
+    ctx.fillStyle = '#1a1208';
+    ctx.fillRect(0, 0, combined.width, combined.height);
+    ctx.drawImage(c1, (combined.width - c1.width)/2, 0);
+    ctx.drawImage(c2, (combined.width - c2.width)/2, c1.height + 40);
+    triggerDownload(combined, 'geocard-full.png');
+  });
+}
+
+function triggerDownload(canvas, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+</script>
+</body>
+</html>
