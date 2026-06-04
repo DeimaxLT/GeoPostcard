@@ -6,7 +6,6 @@
 <title>GeoPostcard — Travel Postcard Creator</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Dancing+Script:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
 <script>
-  // Redirect to GitHub Pages lol
   if (window.location.hostname !== 'deimaxlt.github.io') {
     window.location.replace('https://deimaxlt.github.io/GeoPostcard/');
   }
@@ -148,29 +147,10 @@
   .upload-text { font-family: 'Dancing Script', cursive; font-size: 1.05rem; color: var(--sepia); }
   .upload-sub { font-size: 0.72rem; color: rgba(196,168,130,0.55); margin-top: 0.25rem; }
 
-  /* HTML snippet panel */
-  .html-snippet-panel { display: none; }
-  .html-snippet-panel.active { display: block; }
+  .url-panel { display: none; }
+  .url-panel.active { display: block; }
   .upload-panel { display: block; }
   .upload-panel.hidden { display: none; }
-
-  .snippet-textarea {
-    width: 100%;
-    background: rgba(245,240,232,0.06);
-    border: 1px solid rgba(201,168,76,0.3);
-    border-radius: 2px;
-    color: var(--cream);
-    font-family: 'Courier New', monospace;
-    font-size: 0.78rem;
-    padding: 0.7rem 0.9rem;
-    outline: none;
-    resize: vertical;
-    min-height: 80px;
-    transition: border-color 0.2s;
-    line-height: 1.5;
-  }
-  .snippet-textarea:focus { border-color: var(--gold); }
-  .snippet-textarea::placeholder { color: rgba(196,168,130,0.4); font-style: italic; }
 
   .snippet-feedback {
     margin-top: 0.4rem;
@@ -349,13 +329,6 @@
     padding: 1.5rem 2rem 1.8rem;
     text-align: center; z-index: 5;
   }
-  .pc-subtitle {
-    font-family: 'Dancing Script', cursive;
-    font-size: clamp(0.8rem, 2.5vw, 1.1rem);
-    color: rgba(245,240,232,0.75);
-    letter-spacing: 0.08em; margin-bottom: 0.2rem;
-    text-shadow: 1px 2px 8px rgba(0,0,0,0.8);
-  }
   .pc-main-title {
     font-family: 'Playfair Display', serif;
     font-size: clamp(1.3rem, 4.5vw, 2.4rem);
@@ -459,6 +432,70 @@
   }
   .message-input-area textarea:focus { border-color: var(--gold); }
 
+  /* Geocaching HTML output panel */
+  .geocaching-panel {
+    background: rgba(245,240,232,0.05);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 2px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .geocaching-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .geocaching-panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .geocaching-panel-desc {
+    font-size: 0.75rem;
+    color: rgba(196,168,130,0.6);
+    font-family: 'Libre Baskerville', serif;
+    margin-bottom: 0.9rem;
+    line-height: 1.5;
+  }
+  .geocaching-code-wrap {
+    position: relative;
+  }
+  .geocaching-code {
+    width: 100%;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 2px;
+    color: #b8d4a8;
+    font-family: 'Courier New', monospace;
+    font-size: 0.76rem;
+    padding: 0.9rem 1rem;
+    outline: none;
+    resize: none;
+    line-height: 1.6;
+    min-height: 80px;
+  }
+  .btn-copy-snippet {
+    margin-top: 0.6rem;
+    padding: 0.55rem 1.2rem;
+    border: 1px solid rgba(201,168,76,0.4);
+    background: transparent;
+    color: var(--sepia);
+    font-family: 'Libre Baskerville', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.25s;
+  }
+  .btn-copy-snippet:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.08); }
+  .btn-copy-snippet.copied { border-color: #7ec87e; color: #7ec87e; }
+
   @media (max-width: 600px) {
     .controls-grid { grid-template-columns: 1fr; }
     .pc-main-title { font-size: 1.4rem; }
@@ -485,7 +522,6 @@
         <div class="img-source-tabs">
           <button class="img-tab active" data-tab="upload">Upload File</button>
           <button class="img-tab" data-tab="url">Image URL</button>
-          <button class="img-tab" data-tab="html">Geocaching HTML Snippet</button>
         </div>
 
         <!-- Upload -->
@@ -499,15 +535,9 @@
         </div>
 
         <!-- URL -->
-        <div class="html-snippet-panel" id="panelUrl">
+        <div class="url-panel" id="panelUrl">
           <input type="text" id="imageUrlInput" placeholder="https://example.com/photo.jpg" style="font-family:'Courier New',monospace;font-size:0.82rem;">
           <div class="snippet-feedback" id="urlFeedback"></div>
-        </div>
-
-        <!-- HTML Snippet -->
-        <div class="html-snippet-panel" id="panelHtml">
-          <textarea class="snippet-textarea" id="htmlSnippetInput" placeholder='Paste geocaching HTML here, e.g.:&#10;&lt;a href="..."&gt;&lt;img src="https://..." alt="..." /&gt;&lt;/a&gt;&#10;&#10;The image src will be extracted automatically.'></textarea>
-          <div class="snippet-feedback" id="htmlFeedback"></div>
         </div>
       </div>
 
@@ -537,7 +567,7 @@
       <!-- CUSTOM POSTCARD TEXT -->
       <div class="control-group postcard-text-field" style="grid-column:1/-1">
         <label>Postcard Title Text <span style="font-size:0.6rem;opacity:0.6;text-transform:none;letter-spacing:0">(type your own or pick a preset below)</span></label>
-        <textarea id="customTitleInput" placeholder="e.g. Greetings from Navagio Beach — Wish You Were Here!">Greetings from Navagio Beach</textarea>
+        <textarea id="customTitleInput" placeholder="e.g. Greetings from Navagio Beach">Greetings from Navagio Beach</textarea>
         <div class="preset-pills" id="presetPills"></div>
       </div>
 
@@ -583,7 +613,6 @@
         <div class="pc-border"></div>
         <div class="pc-cache-code">GCBJ8HR</div>
         <div class="pc-title-area">
-          <div class="pc-subtitle" id="pcSubtitle">Wish You Were Here</div>
           <div class="pc-main-title" id="pcMainTitle">Greetings from Navagio Beach</div>
           <div class="pc-tagline" id="pcTagline">IONIAN ISLANDS · GREECE</div>
         </div>
@@ -633,6 +662,20 @@
     <div class="download-row">
       <button class="btn-download" id="downloadFront">⬇ Download Front</button>
       <button class="btn-download" id="downloadBoth">⬇ Download Full Postcard (Front + Back)</button>
+    </div>
+
+    <!-- GEOCACHING HTML SNIPPET OUTPUT -->
+    <div class="geocaching-panel" id="geocachingPanel">
+      <div class="geocaching-panel-header">
+        <span class="geocaching-panel-title">⬡ Geocaching Profile HTML</span>
+      </div>
+      <p class="geocaching-panel-desc">
+        Paste this snippet into your Geocaching profile or cache description. Visitors who click the image will be taken to GeoPostcard to create their own.
+      </p>
+      <div class="geocaching-code-wrap">
+        <textarea class="geocaching-code" id="geocachingCodeOutput" readonly rows="4"></textarea>
+      </div>
+      <button class="btn-copy-snippet" id="btnCopySnippet">⎘ Copy to Clipboard</button>
     </div>
 
   </div><!-- end postcardStage -->
@@ -685,7 +728,7 @@ const presets = {
 };
 
 // ── State ───────────────────────────────────────────────────────────────────
-let resolvedImageURL = null;   // final image URL to use (from any source)
+let resolvedImageURL = null;
 let currentImgSource = 'upload';
 
 // ── Date ────────────────────────────────────────────────────────────────────
@@ -701,7 +744,6 @@ document.querySelectorAll('.img-tab').forEach(tab => {
     currentImgSource = tab.dataset.tab;
     document.getElementById('panelUpload').classList.toggle('hidden', currentImgSource !== 'upload');
     document.getElementById('panelUrl').classList.toggle('active', currentImgSource === 'url');
-    document.getElementById('panelHtml').classList.toggle('active', currentImgSource === 'html');
   });
 });
 
@@ -733,7 +775,6 @@ document.getElementById('imageUrlInput').addEventListener('input', function() {
   const val = this.value.trim();
   const fb = document.getElementById('urlFeedback');
   if (!val) { fb.textContent = ''; resolvedImageURL = null; return; }
-  // Test image loads
   const img = new Image();
   img.onload = () => {
     resolvedImageURL = val;
@@ -746,37 +787,6 @@ document.getElementById('imageUrlInput').addEventListener('input', function() {
     fb.className = 'snippet-feedback err';
   };
   img.src = val;
-});
-
-// ── HTML snippet parser ──────────────────────────────────────────────────────
-document.getElementById('htmlSnippetInput').addEventListener('input', function() {
-  const raw = this.value.trim();
-  const fb = document.getElementById('htmlFeedback');
-  if (!raw) { fb.textContent = ''; resolvedImageURL = null; return; }
-
-  // Parse HTML in a sandbox div and look for <img src="...">
-  const div = document.createElement('div');
-  div.innerHTML = raw;
-  const img = div.querySelector('img');
-
-  if (img && img.getAttribute('src')) {
-    const src = img.getAttribute('src');
-    resolvedImageURL = src;
-    fb.textContent = '✓ Image URL extracted: ' + src.substring(0, 60) + (src.length > 60 ? '…' : '');
-    fb.className = 'snippet-feedback ok';
-  } else {
-    // Also try regex fallback for edge cases
-    const match = raw.match(/src=["']([^"']+)["']/i);
-    if (match) {
-      resolvedImageURL = match[1];
-      fb.textContent = '✓ src extracted: ' + match[1].substring(0, 60) + (match[1].length > 60 ? '…' : '');
-      fb.className = 'snippet-feedback ok';
-    } else {
-      resolvedImageURL = null;
-      fb.textContent = '✗ No image src found in this HTML';
-      fb.className = 'snippet-feedback err';
-    }
-  }
 });
 
 // ── Preset pills ─────────────────────────────────────────────────────────────
@@ -805,32 +815,25 @@ renderPresets();
 document.getElementById('generateBtn').addEventListener('click', () => {
   const loc  = document.getElementById('locationInput').value.trim() || 'Navagio Beach';
   const reg  = document.getElementById('regionInput').value.trim() || 'Greece';
-  const lang = document.getElementById('languageSelect').value;
   const customTitle = document.getElementById('customTitleInput').value.trim();
   const vintage  = document.getElementById('vintageToggle').checked;
   const showBack = document.getElementById('showBackToggle').checked;
 
-  // Title: use custom text; split at first — or newline for subtitle/main
-  let subtitle = 'Wish You Were Here';
   let mainTitle = customTitle || `Greetings from ${loc}`;
 
-  // If the custom text contains " — " split it into subtitle + main
+  // If the custom text contains " — " use only the part after it as main title
   if (customTitle.includes(' — ')) {
     const parts = customTitle.split(' — ');
-    subtitle  = parts[0].trim();
     mainTitle = parts.slice(1).join(' — ').trim();
   } else if (customTitle.includes('\n')) {
     const lines = customTitle.split('\n').map(l => l.trim()).filter(Boolean);
-    subtitle  = lines[0];
-    mainTitle = lines.slice(1).join(' ') || lines[0];
+    mainTitle = lines[lines.length - 1];
   }
 
   const tagline = `${loc.toUpperCase()} · ${reg.toUpperCase()}`;
 
-  // Default back message
   const defaultMsg = `Greetings from ${loc}, ${reg}! An unforgettable adventure in this beautiful corner of the world — treasured memories to carry always.`;
 
-  document.getElementById('pcSubtitle').textContent   = subtitle;
   document.getElementById('pcMainTitle').textContent  = mainTitle;
   document.getElementById('pcTagline').textContent    = tagline;
   document.getElementById('pcGrade').className        = 'pc-grade' + (vintage ? ' vintage' : '');
@@ -856,8 +859,51 @@ document.getElementById('generateBtn').addEventListener('click', () => {
     document.getElementById('messageInputArea').style.display = 'none';
   }
 
+  // ── Build geocaching HTML snippet ────────────────────────────────────────
+  const imageForSnippet = (currentImgSource === 'url')
+    ? (document.getElementById('imageUrlInput').value.trim() || '')
+    : '';
+
+  let snippetHtml;
+  if (imageForSnippet) {
+    snippetHtml =
+`<a href="https://deimaxlt.github.io/GeoPostcard/" title="Create your own GeoPostcard!" target="_blank">` +
+`<img src="${imageForSnippet}" alt="GeoPostcard — ${mainTitle}" style="max-width:100%;border:2px solid #c9a84c;border-radius:3px;" />` +
+`</a>`;
+  } else {
+    snippetHtml =
+`<a href="https://deimaxlt.github.io/GeoPostcard/" title="Create your own GeoPostcard!" target="_blank">` +
+`<img src="YOUR_IMAGE_URL_HERE" alt="GeoPostcard — ${mainTitle}" style="max-width:100%;border:2px solid #c9a84c;border-radius:3px;" />` +
+`</a>`;
+  }
+
+  document.getElementById('geocachingCodeOutput').value = snippetHtml;
+
   document.getElementById('postcardStage').classList.add('visible');
   document.getElementById('postcardStage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ── Copy snippet ──────────────────────────────────────────────────────────────
+document.getElementById('btnCopySnippet').addEventListener('click', function() {
+  const code = document.getElementById('geocachingCodeOutput');
+  code.select();
+  code.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(code.value).then(() => {
+    this.textContent = '✓ Copied!';
+    this.classList.add('copied');
+    setTimeout(() => {
+      this.textContent = '⎘ Copy to Clipboard';
+      this.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    document.execCommand('copy');
+    this.textContent = '✓ Copied!';
+    this.classList.add('copied');
+    setTimeout(() => {
+      this.textContent = '⎘ Copy to Clipboard';
+      this.classList.remove('copied');
+    }, 2000);
+  });
 });
 
 // ── Message sync ──────────────────────────────────────────────────────────────
